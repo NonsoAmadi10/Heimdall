@@ -8,6 +8,7 @@ import (
 )
 
 func Client() *rpcclient.Client {
+
 	// Connect to a running Bitcoin Core node via RPC
 	connCfg := &rpcclient.ConnConfig{
 		Host:         utils.GetEnv("BTC_HOST"),

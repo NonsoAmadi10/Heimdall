@@ -1,14 +1,14 @@
-package handlers
+package services
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/NonsoAmadi10/p2p-analysis/bitcoin"
 )
 
 type NodeMetrics struct {
 	Difficulty    float64     `json:"difficulty"`
-	Version       int32       `json:"version"`
+	Version       interface{} `json:"version"`
 	Chain         string      `json:"chain"`
 	Blocks        int32       `json:"no_of_blocks"`
 	BestBlockHash string      `json:"bestblockhash"`
@@ -21,24 +21,23 @@ func GetInfo() *NodeMetrics {
 
 	defer client.Shutdown()
 
-	info, _ := client.GetInfo()
-
-	moreInfo, err := client.GetBlockChainInfo()
+	info, err := client.GetBlockChainInfo()
 
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 
 	networkInfo, _ := client.GetNetworkInfo()
 
 	metrics := &NodeMetrics{
-		Version:       info.Version,
 		Difficulty:    info.Difficulty,
-		Chain:         moreInfo.Chain,
-		Blocks:        moreInfo.Blocks,
-		BestBlockHash: moreInfo.BestBlockHash,
+		Version:       networkInfo.Version,
+		Chain:         info.Chain,
+		Blocks:        info.Blocks,
+		BestBlockHash: info.BestBlockHash,
 		UserAgent:     networkInfo.SubVersion,
 	}
 
 	return metrics
+
 }
