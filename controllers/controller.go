@@ -5,6 +5,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+type Response struct {
+	Success bool        `json:"success"`
+	Data    interface{} `json:"data"`
+}
+
 func GetMetrics(c *fiber.Ctx) error {
 
 	type NodeResponse struct {
@@ -18,6 +23,18 @@ func GetMetrics(c *fiber.Ctx) error {
 	response := &NodeResponse{
 		Bitcoin:   bitcoin,
 		Lightning: lightning,
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response)
+}
+
+func GetConnMetrics(c *fiber.Ctx) error {
+
+	metrics := services.FetchMetrics()
+
+	response := &Response{
+		Success: true,
+		Data:    metrics,
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response)
