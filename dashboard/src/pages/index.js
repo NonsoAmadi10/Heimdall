@@ -1,5 +1,7 @@
+import Conn from "@/components/Conn"
 import NavBar from "@/components/NavBar"
 import NodeInfo from "@/components/NodeInfo"
+
 
 export default function Home() {
   return (
@@ -11,7 +13,7 @@ export default function Home() {
       <NodeInfo />
 
       <section className="w-full">
-        Conn. Metrics
+        <Conn />
       </section>
      </section>
     </main>
