@@ -15,7 +15,7 @@ function NodeInfo() {
   
     fetchData();
   }, []);
-  console.log(info)
+ 
   return (
     <section className="w-full">
   <div className="mx-auto max-w-screen-xl px-4 py-12 sm:px-6 md:py-16 lg:px-8">
