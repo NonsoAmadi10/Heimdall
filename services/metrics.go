@@ -71,7 +71,7 @@ func ConnectionMetrics() {
 		db.Create(&metrics)
 
 		// Wait for 1 minute before fetching the next set of connection metrics
-		time.Sleep(time.Minute)
+		time.Sleep(time.Minute * 3)
 	}
 
 }
