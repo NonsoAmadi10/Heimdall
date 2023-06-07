@@ -26,7 +26,5 @@ func App() *fiber.App {
 	app.Get("/conn-metrics", controllers.GetConnMetrics)
 
 	go services.ConnectionMetrics()
-	go services.GetNodeLatency("localhost:18332", "btc")
-	go services.GetNodeLatency("localhost:10009", "lnd")
 	return app
 }

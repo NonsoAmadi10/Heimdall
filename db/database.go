@@ -14,7 +14,7 @@ func DB() *gorm.DB {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 
-	db.AutoMigrate(&utils.ConnectionMetrics{}, &utils.Latency{})
+	db.AutoMigrate(&utils.ConnectionMetrics{})
 
 	return db
 
