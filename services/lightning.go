@@ -22,6 +22,7 @@ func GetNodeInfo() *LNodeMetrics {
 	infoReq := &lnrpc.GetInfoRequest{}
 
 	info, err := client.GetInfo(context.Background(), infoReq)
+
 	if err != nil {
 		log.Fatalf("Error getting node info: %v", err)
 	}

@@ -25,6 +25,20 @@ type ConnectionMetrics struct {
 	BtcdBandwidthOut    uint64    `json:"btc_bandwidth_out"`
 }
 
+type Latency struct {
+	ID              uint `json:"id" gorm:"primary_key"`
+	Timestamp       time.Time
+	Node            string `json:"node"`
+	Target          string
+	PacketsSent     int
+	PacketsReceived int
+	PacketLoss      float64
+	RTTMin          float64
+	RTTAvg          float64
+	RTTMax          float64
+	RTTStdDev       float64
+}
+
 func GetEnv(key string) string {
 
 	err := godotenv.Load()

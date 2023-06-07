@@ -9,15 +9,13 @@ import (
 	"github.com/NonsoAmadi10/p2p-analysis/db"
 	"github.com/NonsoAmadi10/p2p-analysis/lightning"
 	"github.com/NonsoAmadi10/p2p-analysis/utils"
+	"github.com/go-ping/ping"
 	"github.com/lncm/lnd-rpc/v0.10.0/lnrpc"
 )
 
 func ConnectionMetrics() {
 
 	db := db.DB()
-
-	// Create the metrics table if it doesn't already exist
-	db.AutoMigrate(&utils.ConnectionMetrics{})
 
 	// Get Bitcoin Client
 	bitcoin := bitcoin.Client()
@@ -74,6 +72,51 @@ func ConnectionMetrics() {
 		time.Sleep(time.Minute * 3)
 	}
 
+}
+
+func GetNodeLatency(targetAddr string, node string) {
+
+	db := db.DB()
+	for {
+		// Create a new pinger
+		pinger, err := ping.NewPinger(targetAddr)
+		if err != nil {
+			log.Printf("Failed to create pinger: %v", err)
+			continue
+		}
+
+		// Set the ping options
+		pinger.Count = 5              // Number of pings to send
+		pinger.Timeout = time.Second  // Timeout for each ping request
+		pinger.Interval = time.Second // Delay between each ping request
+
+		// Start the pinger
+		pinger.Run()
+
+		// Wait until pinging is finished
+		pinger.OnFinish = func(stats *ping.Statistics) {
+			log.Printf("--- %s ping statistics ---", targetAddr)
+			log.Printf("%d packets transmitted, %d packets received, %.2f%% packet loss",
+				stats.PacketsSent, stats.PacketsRecv, stats.PacketLoss)
+			log.Printf("Round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms",
+				stats.MinRtt.Seconds()*1000, stats.AvgRtt.Seconds()*1000, stats.MaxRtt.Seconds()*1000, stats.StdDevRtt.Seconds()*1000)
+
+			metrics := &utils.Latency{
+				Timestamp:       time.Now(),
+				Target:          targetAddr,
+				PacketsSent:     stats.PacketsSent,
+				PacketsReceived: stats.PacketsRecv,
+				PacketLoss:      stats.PacketLoss,
+				RTTMin:          stats.MinRtt.Seconds() * 1000,
+				RTTAvg:          stats.AvgRtt.Seconds() * 1000,
+				RTTMax:          stats.MaxRtt.Seconds() * 1000,
+				RTTStdDev:       stats.StdDevRtt.Seconds() * 1000,
+			}
+
+			db.Create(&metrics)
+		}
+		time.Sleep(time.Minute * 3)
+	}
 }
 
 func FetchMetrics() []utils.ConnectionMetrics {
