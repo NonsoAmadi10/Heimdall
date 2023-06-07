@@ -3,6 +3,7 @@ package db
 import (
 	"log"
 
+	"github.com/NonsoAmadi10/p2p-analysis/utils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -12,6 +13,8 @@ func DB() *gorm.DB {
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
+
+	db.AutoMigrate(&utils.ConnectionMetrics{}, &utils.Latency{})
 
 	return db
 
