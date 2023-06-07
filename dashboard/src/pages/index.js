@@ -1,3 +1,4 @@
+
 import Conn from "@/components/Conn"
 import NavBar from "@/components/NavBar"
 import NodeInfo from "@/components/NodeInfo"
@@ -15,6 +16,8 @@ export default function Home() {
       <section className="w-full">
         <Conn />
       </section>
+
+      
      </section>
     </main>
   )

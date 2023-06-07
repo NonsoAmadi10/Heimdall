@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import CircularProgress from './Progress';
 
 function NodeInfo() {
   const [info, setInfo] = useState({});
@@ -103,6 +104,20 @@ function NodeInfo() {
         </div>
         
       </dl>
+    </div>
+
+    <div className="mx-auto max-w-screen-xl grid gap-x-4 grid-cols-2 py-8">
+      
+      <div className="w-full py-8 px-8 rounded-lg flex flex-col h-auto border border-gray-100"> 
+      <p className="text-gray-500 py-8"> Node Hashrate</p>
+
+      <CircularProgress progress={60} symbol={"TH/s"} color={"bg-blue-600"} value={Math.floor(info["bitcoin"]["hash_rate"] * (10**12))}/>
+      
+      </div>
+      <div className="w-full py-4 px-8 rounded-lg flex flex-col h-auto border border-gray-100">
+         <p className="text-gray-500 py-8"> Block Propagation Time</p>
+         <CircularProgress progress={80} symbol={"mins"} color={"bg-red-600"} value={Math.floor(info["bitcoin"]["block_propagation"])}/>
+      </div>
     </div>
     </div>
     : ""
