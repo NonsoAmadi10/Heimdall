@@ -38,11 +38,20 @@ Lightning RPC certificate and macaroon paths are currently resolved from:
 
 `$HOME/app_container/lightning/...`
 
+Alerting configuration:
+
+- `ALERT_MIN_BTC_PEERS` (default: `3`)
+- `ALERT_LOOKBACK_SAMPLES` (default: `10`)
+- `ALERT_BANDWIDTH_SPIKE_MULTIPLIER` (default: `2.5`)
+
 ## API Endpoints
 
 - `GET /healthz` — service health check
 - `GET /node-info` — aggregated Bitcoin + Lightning node information
 - `GET /conn-metrics` — historical connection metrics from SQLite
+- `GET /alerts` — list current and historical alerts (optional `status=open|acknowledged|resolved`)
+- `PATCH /alerts/:id/ack` — acknowledge an alert
+- `PATCH /alerts/:id/resolve` — resolve an alert manually
 
 ## Frontend Dashboard
 
@@ -64,6 +73,10 @@ go build ./...
 ```
 
 Continuous integration runs these checks on every push and pull request.
+
+## Documentation
+
+- [Alerting and Anomaly Detection](docs/alerting.md)
 
 ## License
 

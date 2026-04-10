@@ -21,6 +21,9 @@ func App() *fiber.App {
 	app.Get("/node-info", controllers.GetMetrics)
 
 	app.Get("/conn-metrics", controllers.GetConnMetrics)
+	app.Get("/alerts", controllers.GetAlerts)
+	app.Patch("/alerts/:id/ack", controllers.AcknowledgeAlert)
+	app.Patch("/alerts/:id/resolve", controllers.ResolveAlert)
 
 	app.Get("/healthz", func(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)

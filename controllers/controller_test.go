@@ -2,12 +2,14 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/NonsoAmadi10/p2p-analysis/services"
 	"github.com/NonsoAmadi10/p2p-analysis/utils"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
 func TestGetMetricsSuccess(t *testing.T) {
@@ -116,6 +118,98 @@ func TestGetConnMetricsFailure(t *testing.T) {
 		t.Fatalf("request failed: %v", err)
 	}
 	if resp.StatusCode != fiber.StatusInternalServerError {
+		t.Fatalf("unexpected status code: %d", resp.StatusCode)
+	}
+}
+
+func TestGetAlertsSuccess(t *testing.T) {
+	originalGetAlerts := getAlerts
+	defer func() {
+		getAlerts = originalGetAlerts
+	}()
+
+	getAlerts = func(status string) ([]utils.Alert, error) {
+		return []utils.Alert{{Type: "sync_stalled", Status: utils.AlertStatusOpen}}, nil
+	}
+
+	app := fiber.New()
+	app.Get("/alerts", GetAlerts)
+
+	req := httptest.NewRequest("GET", "/alerts?status=open", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("unexpected status code: %d", resp.StatusCode)
+	}
+}
+
+func TestAcknowledgeAlertNotFound(t *testing.T) {
+	originalAck := ackAlert
+	defer func() {
+		ackAlert = originalAck
+	}()
+
+	ackAlert = func(id uint) (*utils.Alert, error) {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	app := fiber.New()
+	app.Patch("/alerts/:id/ack", AcknowledgeAlert)
+
+	req := httptest.NewRequest("PATCH", "/alerts/44/ack", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusNotFound {
+		t.Fatalf("unexpected status code: %d", resp.StatusCode)
+	}
+}
+
+func TestResolveAlertSuccess(t *testing.T) {
+	originalResolve := resolveAlert
+	defer func() {
+		resolveAlert = originalResolve
+	}()
+
+	resolveAlert = func(id uint) (*utils.Alert, error) {
+		return &utils.Alert{ID: id, Status: utils.AlertStatusResolved}, nil
+	}
+
+	app := fiber.New()
+	app.Patch("/alerts/:id/resolve", ResolveAlert)
+
+	req := httptest.NewRequest("PATCH", "/alerts/1/resolve", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("unexpected status code: %d", resp.StatusCode)
+	}
+}
+
+func TestAcknowledgeAlertBadRequest(t *testing.T) {
+	originalAck := ackAlert
+	defer func() {
+		ackAlert = originalAck
+	}()
+
+	ackAlert = func(id uint) (*utils.Alert, error) {
+		return nil, errors.New("bad state")
+	}
+
+	app := fiber.New()
+	app.Patch("/alerts/:id/ack", AcknowledgeAlert)
+
+	req := httptest.NewRequest("PATCH", "/alerts/2/ack", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusBadRequest {
 		t.Fatalf("unexpected status code: %d", resp.StatusCode)
 	}
 }
