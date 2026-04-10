@@ -1,26 +1,48 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Heimdall Dashboard
 
-## Getting Started
+Professional monitoring UI for the Heimdall backend APIs.
 
-First, run the development server:
+## Features
+
+- Node overview for Bitcoin and Lightning
+- Real-time operational KPIs (peers, sync health, alert count)
+- Bandwidth and peer trend visualizations
+- Open alert table for active incidents
+- Auto-refresh every 30 seconds plus manual refresh
+
+## Configuration
+
+Set the backend URL in `dashboard/.env.local`:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
+NEXT_PUBLIC_API_BASE_URL=http://localhost:1700
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+If omitted, it defaults to `http://localhost:1700`.
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+## Getting started
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+Install dependencies and run the app:
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+```bash
+yarn dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+Open `http://localhost:3000`.
+
+## Build and lint
+
+```bash
+yarn lint
+yarn build
+```
+
+## API dependencies
+
+- `GET /node-info`
+- `GET /conn-metrics`
+- `GET /conn-metrics/analytics?interval_minutes=60`
+- `GET /alerts?status=open`
 
 ## Learn More
 

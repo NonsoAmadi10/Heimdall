@@ -40,7 +40,13 @@ func GetMetrics(c *fiber.Ctx) error {
 
 	bitcoin, bitcoinErr := getBitcoinMetrics()
 	lightning, lightningErr := getLightningMetrics()
-	if bitcoinErr != nil || lightningErr != nil {
+	if bitcoinErr != nil {
+		log.Printf("Failed to fetch bitcoin node metrics: %v", bitcoinErr)
+	}
+	if lightningErr != nil {
+		log.Printf("Failed to fetch lightning node metrics: %v", lightningErr)
+	}
+	if bitcoinErr != nil && lightningErr != nil {
 		log.Printf("Failed to fetch node metrics. bitcoin_error=%v lightning_error=%v", bitcoinErr, lightningErr)
 		return c.Status(fiber.StatusServiceUnavailable).JSON(&Response{
 			Success: false,

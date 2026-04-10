@@ -171,10 +171,7 @@ func FetchMetricsAnalytics(from, to time.Time, interval time.Duration) (*Metrics
 	}
 
 	var metrics []utils.ConnectionMetrics
-	if err := database.
-		Where("timestamp >= ? AND timestamp <= ?", from, to).
-		Order("timestamp ASC").
-		Find(&metrics).Error; err != nil {
+	if err := database.Order("timestamp ASC").Find(&metrics).Error; err != nil {
 		return nil, err
 	}
 
@@ -191,6 +188,10 @@ func FetchMetricsAnalytics(from, to time.Time, interval time.Duration) (*Metrics
 
 	buckets := make(map[int64]*analyticsAccumulator)
 	for _, m := range metrics {
+		if m.Timestamp.Before(from) || m.Timestamp.After(to) {
+			continue
+		}
+
 		bucketIndex := int64(m.Timestamp.Sub(from) / interval)
 		acc, ok := buckets[bucketIndex]
 		if !ok {

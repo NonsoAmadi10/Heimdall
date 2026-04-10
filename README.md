@@ -38,6 +38,13 @@ Lightning RPC certificate and macaroon paths are currently resolved from:
 
 `$HOME/app_container/lightning/...`
 
+You can override Lightning RPC connection values with:
+
+- `LND_HOST`
+- `LND_PORT`
+- `LND_TLS_FILE`
+- `LND_MACAROON_FILE`
+
 Alerting configuration:
 
 - `ALERT_MIN_BTC_PEERS` (default: `3`)
@@ -67,6 +74,22 @@ curl "http://localhost:1700/conn-metrics/analytics?from=2026-04-09T00:00:00Z&to=
 ```
 
 Continuous integration runs these checks on every push and pull request.
+
+## Dashboard
+
+```bash
+cd dashboard
+cp .env.local.example .env.local
+yarn install
+yarn dev
+```
+
+Open `http://localhost:3000`.
+
+## Dashboard Preview
+
+![Heimdall Dashboard](dashboard/public/screenshots/Heimdall.png)
+![Heimdall Dashboard (Operations)](dashboard/public/screenshots/Heimdall-2.png)
 
 ## Documentation
 - [Alerting and Anomaly Detection](docs/alerting.md)
