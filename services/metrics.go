@@ -74,6 +74,10 @@ func ConnectionMetrics() {
 			return fmt.Errorf("failed to persist connection metrics: %w", err)
 		}
 
+		if err := EvaluateAlerts(database, metrics); err != nil {
+			return fmt.Errorf("failed to evaluate alerts: %w", err)
+		}
+
 		return nil
 	}
 
