@@ -2,9 +2,14 @@ import React from "react";
 
 function StatCard({ label, value, monospace = false }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 p-4">
       <p className="text-xs uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`mt-2 text-lg font-semibold text-slate-100 ${monospace ? "font-mono text-sm sm:text-base" : ""}`}>{value}</p>
+      <p
+        className={`mt-2 text-lg font-semibold text-slate-100 ${monospace ? "break-all font-mono text-xs sm:text-sm" : "truncate"}`}
+        title={String(value)}
+      >
+        {value}
+      </p>
     </div>
   );
 }

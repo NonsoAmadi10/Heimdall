@@ -16,9 +16,11 @@ async function fetchJson(endpoint) {
 
 function TopStat({ label, value }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 p-4">
       <p className="text-xs uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-100">{value}</p>
+      <p className="mt-2 truncate text-2xl font-semibold text-slate-100" title={String(value)}>
+        {value}
+      </p>
     </div>
   );
 }
@@ -66,7 +68,7 @@ export default function Home() {
   const analyticsSummary = analytics?.summary;
 
   return (
-    <main className="min-h-screen bg-slate-950">
+    <main className="min-h-screen overflow-x-hidden bg-slate-950">
       <NavBar
         loading={loading}
         onRefresh={loadDashboard}

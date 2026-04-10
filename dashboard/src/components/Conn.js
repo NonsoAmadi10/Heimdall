@@ -76,25 +76,31 @@ function Conn({ metrics, analytics, alerts }) {
   };
 
   return (
-    <section className="space-y-4">
+    <section className="min-w-0 space-y-4">
       <h2 className="text-lg font-semibold text-slate-100 sm:text-xl">Operations & Trends</h2>
       <div className="grid gap-4 xl:grid-cols-3">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+        <div className="min-w-0 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 p-4">
           <p className="mb-3 text-sm text-slate-300">Peer Distribution</p>
-          <Doughnut data={peerBreakdownData} />
+          <div className="h-72 w-full">
+            <Doughnut data={peerBreakdownData} options={{ responsive: true, maintainAspectRatio: false }} />
+          </div>
         </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4 xl:col-span-2">
+        <div className="min-w-0 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 p-4 xl:col-span-2">
           <p className="mb-3 text-sm text-slate-300">Recent Bandwidth (12 samples)</p>
-          <Line data={bandwidthTrendData} options={{ responsive: true, maintainAspectRatio: false }} height={96} />
+          <div className="h-72 w-full">
+            <Line data={bandwidthTrendData} options={{ responsive: true, maintainAspectRatio: false }} />
+          </div>
         </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4 xl:col-span-2">
+        <div className="min-w-0 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 p-4 xl:col-span-2">
           <p className="mb-3 text-sm text-slate-300">Analytics Peer Trend</p>
-          <Bar data={peerTrendData} options={{ responsive: true, maintainAspectRatio: false }} height={96} />
+          <div className="h-72 w-full">
+            <Bar data={peerTrendData} options={{ responsive: true, maintainAspectRatio: false }} />
+          </div>
         </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+        <div className="min-w-0 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 p-4">
           <p className="text-sm text-slate-300">Current Snapshot</p>
           <dl className="mt-3 space-y-3 text-sm">
             <div className="flex items-center justify-between">
@@ -123,7 +129,7 @@ function Conn({ metrics, analytics, alerts }) {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm text-slate-300">Open Alerts</p>
           <span className="text-xs text-slate-500">{alerts.length} active</span>
@@ -132,24 +138,28 @@ function Conn({ metrics, analytics, alerts }) {
           <p className="rounded-md bg-slate-800/70 px-3 py-2 text-sm text-emerald-300">No active alerts.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
+            <table className="min-w-full table-fixed text-left text-sm">
               <thead className="text-slate-400">
                 <tr>
-                  <th className="px-3 py-2">Type</th>
-                  <th className="px-3 py-2">Severity</th>
-                  <th className="px-3 py-2">Value</th>
-                  <th className="px-3 py-2">Threshold</th>
-                  <th className="px-3 py-2">Triggered</th>
+                  <th className="w-1/5 px-3 py-2">Type</th>
+                  <th className="w-1/6 px-3 py-2">Severity</th>
+                  <th className="w-1/6 px-3 py-2">Value</th>
+                  <th className="w-1/6 px-3 py-2">Threshold</th>
+                  <th className="w-1/3 px-3 py-2">Triggered</th>
                 </tr>
               </thead>
               <tbody>
                 {alerts.map((alert) => (
                   <tr key={alert.id} className="border-t border-slate-800 text-slate-200">
-                    <td className="px-3 py-2">{alert.type}</td>
+                    <td className="truncate px-3 py-2" title={alert.type}>
+                      {alert.type}
+                    </td>
                     <td className="px-3 py-2 capitalize">{alert.severity}</td>
                     <td className="px-3 py-2">{Number(alert.metric_value).toFixed(2)}</td>
                     <td className="px-3 py-2">{Number(alert.threshold).toFixed(2)}</td>
-                    <td className="px-3 py-2">{new Date(alert.triggered_at).toLocaleString()}</td>
+                    <td className="truncate px-3 py-2" title={new Date(alert.triggered_at).toLocaleString()}>
+                      {new Date(alert.triggered_at).toLocaleString()}
+                    </td>
                   </tr>
                 ))}
               </tbody>
