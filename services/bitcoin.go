@@ -1,7 +1,7 @@
 package services
 
 import (
-	"log"
+	"fmt"
 	"math"
 	"time"
 
@@ -20,39 +20,61 @@ type NodeMetrics struct {
 	BlockPropagation float64     `json:"block_propagation"`
 }
 
-func GetInfo() *NodeMetrics {
+func GetInfo() (*NodeMetrics, error) {
 
-	client := bitcoin.Client()
+	client, err := bitcoin.Client()
+	if err != nil {
+		return nil, err
+	}
 
 	defer client.Shutdown()
 
 	info, err := client.GetBlockChainInfo()
 
 	if err != nil {
-		log.Println(err)
+		return nil, fmt.Errorf("failed to fetch blockchain info: %w", err)
 	}
 
-	networkInfo, _ := client.GetNetworkInfo()
+	networkInfo, err := client.GetNetworkInfo()
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch network info: %w", err)
+	}
 
 	lastBlockHash, err := chainhash.NewHashFromStr(info.BestBlockHash)
 	if err != nil {
-		log.Println(err)
+		return nil, fmt.Errorf("failed to parse best block hash: %w", err)
 	}
 
 	lastBlock, err := client.GetBlock(lastBlockHash)
 	if err != nil {
-		log.Println(err)
+		return nil, fmt.Errorf("failed to fetch best block: %w", err)
 	}
 
-	timeToFindBlock := lastBlock.Header.Timestamp.Unix() - int64(lastBlock.Header.PrevBlock[len(lastBlock.Header.PrevBlock)-1])
-	hashrate := float64(info.Difficulty) / (float64(timeToFindBlock) * math.Pow(2, 32))
+	prevBlockHeader, err := client.GetBlockHeader(&lastBlock.Header.PrevBlock)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch previous block header: %w", err)
+	}
 
-	blockCount, _ := client.GetBlockCount()
-	// Get the latest block hash
-	blockHash, _ := client.GetBlockHash(blockCount)
+	timeToFindBlock := lastBlock.Header.Timestamp.Sub(prevBlockHeader.Timestamp).Seconds()
+	hashrate := 0.0
+	if timeToFindBlock > 0 {
+		hashrate = float64(info.Difficulty) * math.Pow(2, 32) / timeToFindBlock
+	}
 
-	// Get the block header
-	blockHeader, _ := client.GetBlockHeader(blockHash)
+	blockCount, err := client.GetBlockCount()
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch block count: %w", err)
+	}
+
+	blockHash, err := client.GetBlockHash(blockCount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch block hash: %w", err)
+	}
+
+	blockHeader, err := client.GetBlockHeader(blockHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch block header: %w", err)
+	}
 
 	propagationTime := time.Since(blockHeader.Timestamp).Minutes()
 
@@ -67,6 +89,6 @@ func GetInfo() *NodeMetrics {
 		BlockPropagation: propagationTime,
 	}
 
-	return metrics
+	return metrics, nil
 
 }

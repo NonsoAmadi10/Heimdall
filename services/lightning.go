@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	"log"
+	"fmt"
 
 	"github.com/NonsoAmadi10/p2p-analysis/lightning"
 	"github.com/lncm/lnd-rpc/v0.10.0/lnrpc"
@@ -15,19 +15,25 @@ type LNodeMetrics struct {
 	NetCapacity int    `json:"network_capacity"`
 }
 
-func GetNodeInfo() *LNodeMetrics {
+func GetNodeInfo() (*LNodeMetrics, error) {
 
-	client := lightning.Client()
+	client, err := lightning.Client()
+	if err != nil {
+		return nil, err
+	}
 
 	infoReq := &lnrpc.GetInfoRequest{}
 
 	info, err := client.GetInfo(context.Background(), infoReq)
 
 	if err != nil {
-		log.Fatalf("Error getting node info: %v", err)
+		return nil, fmt.Errorf("error getting node info: %w", err)
 	}
 
-	moreInfo, _ := client.GetNetworkInfo(context.Background(), &lnrpc.NetworkInfoRequest{})
+	moreInfo, err := client.GetNetworkInfo(context.Background(), &lnrpc.NetworkInfoRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("error getting network info: %w", err)
+	}
 
 	result := &LNodeMetrics{
 		UserAgent:   info.Version,
@@ -36,5 +42,5 @@ func GetNodeInfo() *LNodeMetrics {
 		PubKey:      info.IdentityPubkey,
 	}
 
-	return result
+	return result, nil
 }

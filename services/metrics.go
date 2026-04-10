@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -13,34 +14,38 @@ import (
 )
 
 func ConnectionMetrics() {
+	database, err := db.DB()
+	if err != nil {
+		log.Printf("Failed to initialize database for metrics collection: %v", err)
+		return
+	}
 
-	db := db.DB()
+	btcClient, err := bitcoin.Client()
+	if err != nil {
+		log.Printf("Failed to initialize Bitcoin client for metrics collection: %v", err)
+		return
+	}
+	defer btcClient.Shutdown()
 
-	// Get Bitcoin Client
-	bitcoin := bitcoin.Client()
+	lndClient, err := lightning.Client()
+	if err != nil {
+		log.Printf("Failed to initialize Lightning client for metrics collection: %v", err)
+		return
+	}
 
-	defer bitcoin.Shutdown()
-
-	// Get Lightning Client
-	lnd := lightning.Client()
-
-	for {
-		//Get Bitcoin Peer Info
-
-		peerInfo, err := bitcoin.GetPeerInfo()
+	writeMetrics := func() error {
+		peerInfo, err := btcClient.GetPeerInfo()
 
 		if err != nil {
-			log.Printf("Failed to fetch btcd peer info: %v", err)
-			continue
+			return fmt.Errorf("failed to fetch btcd peer info: %w", err)
 		}
 
 		infoReq := &lnrpc.GetInfoRequest{}
 
-		lndInfo, err := lnd.GetInfo(context.Background(), infoReq)
+		lndInfo, err := lndClient.GetInfo(context.Background(), infoReq)
 
 		if err != nil {
-			log.Printf("Failed to fetch lnd info: %v", err)
-			continue
+			return fmt.Errorf("failed to fetch lnd info: %w", err)
 		}
 
 		// Calculate the incoming and outgoing bandwidth for the btcd node
@@ -65,25 +70,42 @@ func ConnectionMetrics() {
 			SyncedToChain:       lndInfo.SyncedToChain,
 		}
 
-		db.Create(&metrics)
+		if err := database.Create(&metrics).Error; err != nil {
+			return fmt.Errorf("failed to persist connection metrics: %w", err)
+		}
 
-		// Wait for 1 minute before fetching the next set of connection metrics
-		time.Sleep(time.Minute * 3)
+		return nil
+	}
+
+	if err := writeMetrics(); err != nil {
+		log.Printf("Connection metrics collection failed: %v", err)
+	}
+
+	ticker := time.NewTicker(3 * time.Minute)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if err := writeMetrics(); err != nil {
+			log.Printf("Connection metrics collection failed: %v", err)
+		}
 	}
 
 }
 
-func FetchMetrics() []utils.ConnectionMetrics {
+func FetchMetrics() ([]utils.ConnectionMetrics, error) {
 
 	var allMetrics []utils.ConnectionMetrics
 
-	db := db.DB()
-
-	//fetch all metrics
-	if err := db.Find(&allMetrics).Error; err != nil {
-		log.Fatal(err)
+	database, err := db.DB()
+	if err != nil {
+		return nil, err
 	}
 
-	return allMetrics
+	//fetch all metrics
+	if err := database.Find(&allMetrics).Error; err != nil {
+		return nil, err
+	}
+
+	return allMetrics, nil
 
 }
