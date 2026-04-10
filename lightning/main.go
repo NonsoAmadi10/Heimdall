@@ -7,8 +7,10 @@ import (
 	"log"
 	"os"
 	"os/user"
+	"strconv"
 	"time"
 
+	"github.com/NonsoAmadi10/p2p-analysis/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"gopkg.in/macaroon.v2"
@@ -74,6 +76,23 @@ func Client() (lnrpc.LightningClient, error) {
 		tlsFile      = fmt.Sprintf("%s/tls.cert", lndDir)
 		macaroonFile = fmt.Sprintf("%s/data/chain/bitcoin/testnet/admin.macaroon", lndDir)
 	)
+
+	if envHost := utils.GetEnv("LND_HOST"); envHost != "" {
+		hostname = envHost
+	}
+	if envPort := utils.GetEnv("LND_PORT"); envPort != "" {
+		parsedPort, parseErr := strconv.Atoi(envPort)
+		if parseErr != nil {
+			return nil, fmt.Errorf("invalid LND_PORT value: %w", parseErr)
+		}
+		port = parsedPort
+	}
+	if envTLSFile := utils.GetEnv("LND_TLS_FILE"); envTLSFile != "" {
+		tlsFile = envTLSFile
+	}
+	if envMacaroon := utils.GetEnv("LND_MACAROON_FILE"); envMacaroon != "" {
+		macaroonFile = envMacaroon
+	}
 
 	client, err := getClient(hostname, port, tlsFile, macaroonFile)
 	if err != nil {
