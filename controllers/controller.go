@@ -22,6 +22,9 @@ var (
 	getLightningMetrics    = services.GetNodeInfo
 	getConnectionMetric    = services.FetchMetrics
 	getConnectionAnalytics = services.FetchMetricsAnalytics
+	getAlerts              = services.FetchAlerts
+	ackAlert               = services.AcknowledgeAlert
+	resolveAlert           = services.ResolveAlert
 	defaultAnalyticsWindow = 24 * time.Hour
 	defaultAnalyticsBucket = 60
 	minAnalyticsBucket     = 1
@@ -131,4 +134,90 @@ func GetConnMetricsAnalytics(c *fiber.Ctx) error {
 		Success: true,
 		Data:    analytics,
 	})
+}
+
+func GetAlerts(c *fiber.Ctx) error {
+	status := c.Query("status")
+	alerts, err := getAlerts(status)
+	if err != nil {
+		log.Printf("Failed to fetch alerts: %v", err)
+		return c.Status(fiber.StatusBadRequest).JSON(&Response{
+			Success: false,
+			Error:   "unable to fetch alerts",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(&Response{
+		Success: true,
+		Data:    alerts,
+	})
+}
+
+func AcknowledgeAlert(c *fiber.Ctx) error {
+	alertID, err := parseAlertID(c)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(&Response{
+			Success: false,
+			Error:   "invalid alert id",
+		})
+	}
+
+	alert, err := ackAlert(alertID)
+	if err != nil {
+		log.Printf("Failed to acknowledge alert: %v", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(&Response{
+				Success: false,
+				Error:   "alert not found",
+			})
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(&Response{
+			Success: false,
+			Error:   err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(&Response{
+		Success: true,
+		Data:    alert,
+	})
+}
+
+func ResolveAlert(c *fiber.Ctx) error {
+	alertID, err := parseAlertID(c)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(&Response{
+			Success: false,
+			Error:   "invalid alert id",
+		})
+	}
+
+	alert, err := resolveAlert(alertID)
+	if err != nil {
+		log.Printf("Failed to resolve alert: %v", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(&Response{
+				Success: false,
+				Error:   "alert not found",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(&Response{
+			Success: false,
+			Error:   "unable to resolve alert",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(&Response{
+		Success: true,
+		Data:    alert,
+	})
+}
+
+func parseAlertID(c *fiber.Ctx) (uint, error) {
+	alertID, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return uint(alertID), nil
 }
