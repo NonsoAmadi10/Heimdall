@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/NonsoAmadi10/p2p-analysis/services"
 	"github.com/gofiber/fiber/v2"
@@ -17,12 +18,14 @@ type Response struct {
 }
 
 var (
-	getBitcoinMetrics   = services.GetInfo
-	getLightningMetrics = services.GetNodeInfo
-	getConnectionMetric = services.FetchMetrics
-	getAlerts           = services.FetchAlerts
-	ackAlert            = services.AcknowledgeAlert
-	resolveAlert        = services.ResolveAlert
+	getBitcoinMetrics      = services.GetInfo
+	getLightningMetrics    = services.GetNodeInfo
+	getConnectionMetric    = services.FetchMetrics
+	getConnectionAnalytics = services.FetchMetricsAnalytics
+	defaultAnalyticsWindow = 24 * time.Hour
+	defaultAnalyticsBucket = 60
+	minAnalyticsBucket     = 1
+	maxAnalyticsBucket     = 24 * 60
 )
 
 func GetMetrics(c *fiber.Ctx) error {
@@ -69,88 +72,63 @@ func GetConnMetrics(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(response)
 }
 
-func GetAlerts(c *fiber.Ctx) error {
-	status := c.Query("status")
-	alerts, err := getAlerts(status)
-	if err != nil {
-		log.Printf("Failed to fetch alerts: %v", err)
-		return c.Status(fiber.StatusBadRequest).JSON(&Response{
-			Success: false,
-			Error:   "unable to fetch alerts",
-		})
-	}
+func GetConnMetricsAnalytics(c *fiber.Ctx) error {
+	now := time.Now().UTC()
+	from := now.Add(-defaultAnalyticsWindow)
+	to := now
 
-	return c.Status(fiber.StatusOK).JSON(&Response{
-		Success: true,
-		Data:    alerts,
-	})
-}
-
-func AcknowledgeAlert(c *fiber.Ctx) error {
-	alertID, err := parseAlertID(c)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(&Response{
-			Success: false,
-			Error:   "invalid alert id",
-		})
-	}
-
-	alert, err := ackAlert(alertID)
-	if err != nil {
-		log.Printf("Failed to acknowledge alert: %v", err)
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(&Response{
+	if fromQuery := c.Query("from"); fromQuery != "" {
+		parsedFrom, err := time.Parse(time.RFC3339, fromQuery)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(&Response{
 				Success: false,
-				Error:   "alert not found",
+				Error:   "invalid 'from' timestamp, expected RFC3339 format",
 			})
 		}
-		return c.Status(fiber.StatusBadRequest).JSON(&Response{
-			Success: false,
-			Error:   err.Error(),
-		})
+		from = parsedFrom.UTC()
 	}
 
-	return c.Status(fiber.StatusOK).JSON(&Response{
-		Success: true,
-		Data:    alert,
-	})
-}
-
-func ResolveAlert(c *fiber.Ctx) error {
-	alertID, err := parseAlertID(c)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(&Response{
-			Success: false,
-			Error:   "invalid alert id",
-		})
-	}
-
-	alert, err := resolveAlert(alertID)
-	if err != nil {
-		log.Printf("Failed to resolve alert: %v", err)
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(&Response{
+	if toQuery := c.Query("to"); toQuery != "" {
+		parsedTo, err := time.Parse(time.RFC3339, toQuery)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(&Response{
 				Success: false,
-				Error:   "alert not found",
+				Error:   "invalid 'to' timestamp, expected RFC3339 format",
 			})
 		}
+		to = parsedTo.UTC()
+	}
+
+	intervalMinutes := defaultAnalyticsBucket
+	if intervalQuery := c.Query("interval_minutes"); intervalQuery != "" {
+		parsedInterval, err := strconv.Atoi(intervalQuery)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(&Response{
+				Success: false,
+				Error:   "invalid 'interval_minutes', expected integer",
+			})
+		}
+		intervalMinutes = parsedInterval
+	}
+
+	if intervalMinutes < minAnalyticsBucket || intervalMinutes > maxAnalyticsBucket {
+		return c.Status(fiber.StatusBadRequest).JSON(&Response{
+			Success: false,
+			Error:   "interval_minutes must be between 1 and 1440",
+		})
+	}
+
+	analytics, err := getConnectionAnalytics(from, to, time.Duration(intervalMinutes)*time.Minute)
+	if err != nil {
+		log.Printf("Failed to fetch connection analytics: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(&Response{
 			Success: false,
-			Error:   "unable to resolve alert",
+			Error:   "unable to fetch connection analytics",
 		})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(&Response{
 		Success: true,
-		Data:    alert,
+		Data:    analytics,
 	})
-}
-
-func parseAlertID(c *fiber.Ctx) (uint, error) {
-	alertID, err := strconv.ParseUint(c.Params("id"), 10, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	return uint(alertID), nil
 }

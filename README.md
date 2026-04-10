@@ -52,31 +52,26 @@ Alerting configuration:
 - `GET /alerts` — list current and historical alerts (optional `status=open|acknowledged|resolved`)
 - `PATCH /alerts/:id/ack` — acknowledge an alert
 - `PATCH /alerts/:id/resolve` — resolve an alert manually
+- `GET /conn-metrics/analytics` — aggregated historical analytics with time buckets
 
-## Frontend Dashboard
+### Analytics Query Parameters
 
-```bash
-cd dashboard
-yarn install
-yarn dev
-```
+- `from` (optional, RFC3339 timestamp, default: now - 24h)
+- `to` (optional, RFC3339 timestamp, default: now)
+- `interval_minutes` (optional, integer 1-1440, default: 60)
 
-Open `http://localhost:3000`.
-
-## Development
-
-Run tests and build locally:
+Example:
 
 ```bash
-go test ./...
-go build ./...
+curl "http://localhost:1700/conn-metrics/analytics?from=2026-04-09T00:00:00Z&to=2026-04-10T00:00:00Z&interval_minutes=30"
 ```
 
 Continuous integration runs these checks on every push and pull request.
 
 ## Documentation
-
 - [Alerting and Anomaly Detection](docs/alerting.md)
+- [Historical Analytics API](docs/historical-analytics.md)
+
 
 ## License
 

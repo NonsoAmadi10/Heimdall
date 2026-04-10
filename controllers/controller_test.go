@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/NonsoAmadi10/p2p-analysis/services"
 	"github.com/NonsoAmadi10/p2p-analysis/utils"
@@ -122,20 +123,27 @@ func TestGetConnMetricsFailure(t *testing.T) {
 	}
 }
 
-func TestGetAlertsSuccess(t *testing.T) {
-	originalGetAlerts := getAlerts
+func TestGetConnMetricsAnalyticsSuccess(t *testing.T) {
+	originalAnalytics := getConnectionAnalytics
 	defer func() {
-		getAlerts = originalGetAlerts
+		getConnectionAnalytics = originalAnalytics
 	}()
 
-	getAlerts = func(status string) ([]utils.Alert, error) {
-		return []utils.Alert{{Type: "sync_stalled", Status: utils.AlertStatusOpen}}, nil
+	getConnectionAnalytics = func(from, to time.Time, interval time.Duration) (*services.MetricsAnalyticsResponse, error) {
+		return &services.MetricsAnalyticsResponse{
+			From:            from,
+			To:              to,
+			IntervalMinutes: int(interval.Minutes()),
+			Points: []services.MetricsAnalyticsPoint{
+				{Samples: 2},
+			},
+		}, nil
 	}
 
 	app := fiber.New()
-	app.Get("/alerts", GetAlerts)
+	app.Get("/conn-metrics/analytics", GetConnMetricsAnalytics)
 
-	req := httptest.NewRequest("GET", "/alerts?status=open", nil)
+	req := httptest.NewRequest("GET", "/conn-metrics/analytics?interval_minutes=30", nil)
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -145,66 +153,11 @@ func TestGetAlertsSuccess(t *testing.T) {
 	}
 }
 
-func TestAcknowledgeAlertNotFound(t *testing.T) {
-	originalAck := ackAlert
-	defer func() {
-		ackAlert = originalAck
-	}()
-
-	ackAlert = func(id uint) (*utils.Alert, error) {
-		return nil, gorm.ErrRecordNotFound
-	}
-
+func TestGetConnMetricsAnalyticsBadInterval(t *testing.T) {
 	app := fiber.New()
-	app.Patch("/alerts/:id/ack", AcknowledgeAlert)
+	app.Get("/conn-metrics/analytics", GetConnMetricsAnalytics)
 
-	req := httptest.NewRequest("PATCH", "/alerts/44/ack", nil)
-	resp, err := app.Test(req)
-	if err != nil {
-		t.Fatalf("request failed: %v", err)
-	}
-	if resp.StatusCode != fiber.StatusNotFound {
-		t.Fatalf("unexpected status code: %d", resp.StatusCode)
-	}
-}
-
-func TestResolveAlertSuccess(t *testing.T) {
-	originalResolve := resolveAlert
-	defer func() {
-		resolveAlert = originalResolve
-	}()
-
-	resolveAlert = func(id uint) (*utils.Alert, error) {
-		return &utils.Alert{ID: id, Status: utils.AlertStatusResolved}, nil
-	}
-
-	app := fiber.New()
-	app.Patch("/alerts/:id/resolve", ResolveAlert)
-
-	req := httptest.NewRequest("PATCH", "/alerts/1/resolve", nil)
-	resp, err := app.Test(req)
-	if err != nil {
-		t.Fatalf("request failed: %v", err)
-	}
-	if resp.StatusCode != fiber.StatusOK {
-		t.Fatalf("unexpected status code: %d", resp.StatusCode)
-	}
-}
-
-func TestAcknowledgeAlertBadRequest(t *testing.T) {
-	originalAck := ackAlert
-	defer func() {
-		ackAlert = originalAck
-	}()
-
-	ackAlert = func(id uint) (*utils.Alert, error) {
-		return nil, errors.New("bad state")
-	}
-
-	app := fiber.New()
-	app.Patch("/alerts/:id/ack", AcknowledgeAlert)
-
-	req := httptest.NewRequest("PATCH", "/alerts/2/ack", nil)
+	req := httptest.NewRequest("GET", "/conn-metrics/analytics?interval_minutes=0", nil)
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)

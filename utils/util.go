@@ -11,7 +11,7 @@ import (
 
 type ConnectionMetrics struct {
 	ID                  uint      `json:"id" gorm:"primary_key"`
-	Timestamp           time.Time `json:"timestamp" gorm:"not null"`
+	Timestamp           time.Time `json:"timestamp" gorm:"not null;index"`
 	BlockHeight         int64     `json:"block_height"`
 	BlockHash           string    `json:"block_hash"`
 	BestHeaderAge       int64     `json:"best_header_age"`
