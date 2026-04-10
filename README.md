@@ -68,6 +68,17 @@ curl "http://localhost:1700/conn-metrics/analytics?from=2026-04-09T00:00:00Z&to=
 
 Continuous integration runs these checks on every push and pull request.
 
+## Dashboard
+
+```bash
+cd dashboard
+cp .env.local.example .env.local
+yarn install
+yarn dev
+```
+
+Open `http://localhost:3000`.
+
 ## Documentation
 - [Alerting and Anomaly Detection](docs/alerting.md)
 - [Historical Analytics API](docs/historical-analytics.md)
