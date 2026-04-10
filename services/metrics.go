@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/NonsoAmadi10/p2p-analysis/bitcoin"
@@ -112,4 +113,152 @@ func FetchMetrics() ([]utils.ConnectionMetrics, error) {
 
 	return allMetrics, nil
 
+}
+
+type MetricsAnalyticsPoint struct {
+	BucketStart       time.Time `json:"bucket_start"`
+	BucketEnd         time.Time `json:"bucket_end"`
+	Samples           int       `json:"samples"`
+	AvgBTCPeers       float64   `json:"avg_btc_peers"`
+	AvgLNDPeers       float64   `json:"avg_lnd_peers"`
+	AvgBandwidthIn    float64   `json:"avg_bandwidth_in"`
+	AvgBandwidthOut   float64   `json:"avg_bandwidth_out"`
+	MaxBandwidthIn    uint64    `json:"max_bandwidth_in"`
+	MaxBandwidthOut   uint64    `json:"max_bandwidth_out"`
+	SyncHealthPercent float64   `json:"sync_health_percent"`
+}
+
+type MetricsAnalyticsSummary struct {
+	TotalSamples      int     `json:"total_samples"`
+	AvgBTCPeers       float64 `json:"avg_btc_peers"`
+	AvgLNDPeers       float64 `json:"avg_lnd_peers"`
+	AvgBandwidthIn    float64 `json:"avg_bandwidth_in"`
+	AvgBandwidthOut   float64 `json:"avg_bandwidth_out"`
+	SyncHealthPercent float64 `json:"sync_health_percent"`
+}
+
+type MetricsAnalyticsResponse struct {
+	From            time.Time               `json:"from"`
+	To              time.Time               `json:"to"`
+	IntervalMinutes int                     `json:"interval_minutes"`
+	Points          []MetricsAnalyticsPoint `json:"points"`
+	Summary         MetricsAnalyticsSummary `json:"summary"`
+}
+
+type analyticsAccumulator struct {
+	samples         int
+	syncSamples     int
+	sumBTCPeers     int64
+	sumLNDPeers     int64
+	sumBandwidthIn  uint64
+	sumBandwidthOut uint64
+	maxBandwidthIn  uint64
+	maxBandwidthOut uint64
+}
+
+func FetchMetricsAnalytics(from, to time.Time, interval time.Duration) (*MetricsAnalyticsResponse, error) {
+	if !to.After(from) {
+		return nil, fmt.Errorf("to must be after from")
+	}
+
+	if interval <= 0 {
+		return nil, fmt.Errorf("interval must be greater than 0")
+	}
+
+	database, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+
+	var metrics []utils.ConnectionMetrics
+	if err := database.
+		Where("timestamp >= ? AND timestamp <= ?", from, to).
+		Order("timestamp ASC").
+		Find(&metrics).Error; err != nil {
+		return nil, err
+	}
+
+	response := &MetricsAnalyticsResponse{
+		From:            from.UTC(),
+		To:              to.UTC(),
+		IntervalMinutes: int(interval.Minutes()),
+		Points:          []MetricsAnalyticsPoint{},
+	}
+
+	if len(metrics) == 0 {
+		return response, nil
+	}
+
+	buckets := make(map[int64]*analyticsAccumulator)
+	for _, m := range metrics {
+		bucketIndex := int64(m.Timestamp.Sub(from) / interval)
+		acc, ok := buckets[bucketIndex]
+		if !ok {
+			acc = &analyticsAccumulator{}
+			buckets[bucketIndex] = acc
+		}
+
+		acc.samples++
+		acc.sumBTCPeers += int64(m.NumBTCPeers)
+		acc.sumLNDPeers += int64(m.NumLNDPeers)
+		acc.sumBandwidthIn += m.BtcdBandwidthIn
+		acc.sumBandwidthOut += m.BtcdBandwidthOut
+		if m.BtcdBandwidthIn > acc.maxBandwidthIn {
+			acc.maxBandwidthIn = m.BtcdBandwidthIn
+		}
+		if m.BtcdBandwidthOut > acc.maxBandwidthOut {
+			acc.maxBandwidthOut = m.BtcdBandwidthOut
+		}
+		if m.SyncedToChain {
+			acc.syncSamples++
+		}
+	}
+
+	bucketIndexes := make([]int64, 0, len(buckets))
+	for i := range buckets {
+		bucketIndexes = append(bucketIndexes, i)
+	}
+	sort.Slice(bucketIndexes, func(i, j int) bool {
+		return bucketIndexes[i] < bucketIndexes[j]
+	})
+
+	summary := analyticsAccumulator{}
+	for _, idx := range bucketIndexes {
+		acc := buckets[idx]
+		bucketStart := from.Add(time.Duration(idx) * interval).UTC()
+		bucketEnd := bucketStart.Add(interval).UTC()
+
+		point := MetricsAnalyticsPoint{
+			BucketStart:       bucketStart,
+			BucketEnd:         bucketEnd,
+			Samples:           acc.samples,
+			AvgBTCPeers:       float64(acc.sumBTCPeers) / float64(acc.samples),
+			AvgLNDPeers:       float64(acc.sumLNDPeers) / float64(acc.samples),
+			AvgBandwidthIn:    float64(acc.sumBandwidthIn) / float64(acc.samples),
+			AvgBandwidthOut:   float64(acc.sumBandwidthOut) / float64(acc.samples),
+			MaxBandwidthIn:    acc.maxBandwidthIn,
+			MaxBandwidthOut:   acc.maxBandwidthOut,
+			SyncHealthPercent: (float64(acc.syncSamples) / float64(acc.samples)) * 100,
+		}
+
+		response.Points = append(response.Points, point)
+
+		summary.samples += acc.samples
+		summary.syncSamples += acc.syncSamples
+		summary.sumBTCPeers += acc.sumBTCPeers
+		summary.sumLNDPeers += acc.sumLNDPeers
+		summary.sumBandwidthIn += acc.sumBandwidthIn
+		summary.sumBandwidthOut += acc.sumBandwidthOut
+	}
+
+	response.Summary = MetricsAnalyticsSummary{
+		TotalSamples:      summary.samples,
+		AvgBTCPeers:       float64(summary.sumBTCPeers) / float64(summary.samples),
+		AvgLNDPeers:       float64(summary.sumLNDPeers) / float64(summary.samples),
+		AvgBandwidthIn:    float64(summary.sumBandwidthIn) / float64(summary.samples),
+		AvgBandwidthOut:   float64(summary.sumBandwidthOut) / float64(summary.samples),
+		SyncHealthPercent: (float64(summary.syncSamples) / float64(summary.samples)) * 100,
+	}
+
+	return response, nil
 }
