@@ -1,13 +1,14 @@
 package bitcoin
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/NonsoAmadi10/p2p-analysis/utils"
 	"github.com/btcsuite/btcd/rpcclient"
 )
 
-func Client() *rpcclient.Client {
+func Client() (*rpcclient.Client, error) {
 
 	// Connect to a running Bitcoin Core node via RPC
 	connCfg := &rpcclient.ConnConfig{
@@ -20,15 +21,14 @@ func Client() *rpcclient.Client {
 
 	client, err := rpcclient.New(connCfg, nil)
 	if err != nil {
-		log.Fatal("Error connecting to bitcoind:", err)
-	}
-	// Get the current block count
-	blockCount, err := client.GetBlockCount()
-	if err != nil {
-		log.Println("Error getting block count:", err)
-
+		return nil, fmt.Errorf("error connecting to bitcoind: %w", err)
 	}
 
-	log.Println("Current block count:", blockCount)
-	return client
+	if _, err := client.GetBlockCount(); err != nil {
+		client.Shutdown()
+		return nil, fmt.Errorf("error validating bitcoind connectivity: %w", err)
+	}
+
+	log.Println("Connected to bitcoind RPC")
+	return client, nil
 }

@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"os/user"
 	"time"
 
@@ -28,15 +28,15 @@ func newCreds(bytes []byte) rpcCreds {
 	return creds
 }
 
-func getClient(hostname string, port int, tlsFile, macaroonFile string) lnrpc.LightningClient {
-	macaroonBytes, err := ioutil.ReadFile(macaroonFile)
+func getClient(hostname string, port int, tlsFile, macaroonFile string) (lnrpc.LightningClient, error) {
+	macaroonBytes, err := os.ReadFile(macaroonFile)
 	if err != nil {
-		panic(fmt.Sprintln("Cannot read macaroon file", err))
+		return nil, fmt.Errorf("cannot read macaroon file: %w", err)
 	}
 
 	mac := &macaroon.Macaroon{}
 	if err = mac.UnmarshalBinary(macaroonBytes); err != nil {
-		panic(fmt.Sprintln("Cannot unmarshal macaroon", err))
+		return nil, fmt.Errorf("cannot unmarshal macaroon: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -44,7 +44,7 @@ func getClient(hostname string, port int, tlsFile, macaroonFile string) lnrpc.Li
 
 	transportCredentials, err := credentials.NewClientTLSFromFile(tlsFile, hostname)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("cannot load tls credentials: %w", err)
 	}
 
 	fullHostname := fmt.Sprintf("%s:%d", hostname, port)
@@ -55,16 +55,16 @@ func getClient(hostname string, port int, tlsFile, macaroonFile string) lnrpc.Li
 		grpc.WithPerRPCCredentials(newCreds(macaroonBytes)),
 	}...)
 	if err != nil {
-		panic(fmt.Errorf("unable to connect to %s: %w", fullHostname, err))
+		return nil, fmt.Errorf("unable to connect to %s: %w", fullHostname, err)
 	}
 
-	return lnrpc.NewLightningClient(connection)
+	return lnrpc.NewLightningClient(connection), nil
 }
 
-func Client() lnrpc.LightningClient {
+func Client() (lnrpc.LightningClient, error) {
 	usr, err := user.Current()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	homeDir := usr.HomeDir
 	lndDir := fmt.Sprintf("%s/app_container/lightning", homeDir)
@@ -75,7 +75,11 @@ func Client() lnrpc.LightningClient {
 		macaroonFile = fmt.Sprintf("%s/data/chain/bitcoin/testnet/admin.macaroon", lndDir)
 	)
 
-	client := getClient(hostname, port, tlsFile, macaroonFile)
+	client, err := getClient(hostname, port, tlsFile, macaroonFile)
+	if err != nil {
+		return nil, err
+	}
 
-	return client
+	log.Println("Connected to lnd RPC")
+	return client, nil
 }
