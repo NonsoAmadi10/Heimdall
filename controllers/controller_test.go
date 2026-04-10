@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/NonsoAmadi10/p2p-analysis/services"
 	"github.com/NonsoAmadi10/p2p-analysis/utils"
@@ -116,6 +117,50 @@ func TestGetConnMetricsFailure(t *testing.T) {
 		t.Fatalf("request failed: %v", err)
 	}
 	if resp.StatusCode != fiber.StatusInternalServerError {
+		t.Fatalf("unexpected status code: %d", resp.StatusCode)
+	}
+}
+
+func TestGetConnMetricsAnalyticsSuccess(t *testing.T) {
+	originalAnalytics := getConnectionAnalytics
+	defer func() {
+		getConnectionAnalytics = originalAnalytics
+	}()
+
+	getConnectionAnalytics = func(from, to time.Time, interval time.Duration) (*services.MetricsAnalyticsResponse, error) {
+		return &services.MetricsAnalyticsResponse{
+			From:            from,
+			To:              to,
+			IntervalMinutes: int(interval.Minutes()),
+			Points: []services.MetricsAnalyticsPoint{
+				{Samples: 2},
+			},
+		}, nil
+	}
+
+	app := fiber.New()
+	app.Get("/conn-metrics/analytics", GetConnMetricsAnalytics)
+
+	req := httptest.NewRequest("GET", "/conn-metrics/analytics?interval_minutes=30", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("unexpected status code: %d", resp.StatusCode)
+	}
+}
+
+func TestGetConnMetricsAnalyticsBadInterval(t *testing.T) {
+	app := fiber.New()
+	app.Get("/conn-metrics/analytics", GetConnMetricsAnalytics)
+
+	req := httptest.NewRequest("GET", "/conn-metrics/analytics?interval_minutes=0", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusBadRequest {
 		t.Fatalf("unexpected status code: %d", resp.StatusCode)
 	}
 }

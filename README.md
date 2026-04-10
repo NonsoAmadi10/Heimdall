@@ -43,6 +43,19 @@ Lightning RPC certificate and macaroon paths are currently resolved from:
 - `GET /healthz` — service health check
 - `GET /node-info` — aggregated Bitcoin + Lightning node information
 - `GET /conn-metrics` — historical connection metrics from SQLite
+- `GET /conn-metrics/analytics` — aggregated historical analytics with time buckets
+
+### Analytics Query Parameters
+
+- `from` (optional, RFC3339 timestamp, default: now - 24h)
+- `to` (optional, RFC3339 timestamp, default: now)
+- `interval_minutes` (optional, integer 1-1440, default: 60)
+
+Example:
+
+```bash
+curl "http://localhost:1700/conn-metrics/analytics?from=2026-04-09T00:00:00Z&to=2026-04-10T00:00:00Z&interval_minutes=30"
+```
 
 ## Frontend Dashboard
 
@@ -64,6 +77,10 @@ go build ./...
 ```
 
 Continuous integration runs these checks on every push and pull request.
+
+## Documentation
+
+- [Historical Analytics API](docs/historical-analytics.md)
 
 ## License
 
