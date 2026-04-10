@@ -38,6 +38,13 @@ Lightning RPC certificate and macaroon paths are currently resolved from:
 
 `$HOME/app_container/lightning/...`
 
+You can override Lightning RPC connection values with:
+
+- `LND_HOST`
+- `LND_PORT`
+- `LND_TLS_FILE`
+- `LND_MACAROON_FILE`
+
 Alerting configuration:
 
 - `ALERT_MIN_BTC_PEERS` (default: `3`)
@@ -78,6 +85,11 @@ yarn dev
 ```
 
 Open `http://localhost:3000`.
+
+## Dashboard Preview
+
+![Heimdall Dashboard](dashboard/public/screenshots/Heimdall.png)
+![Heimdall Dashboard (Operations)](dashboard/public/screenshots/Heimdall-2.png)
 
 ## Documentation
 - [Alerting and Anomaly Detection](docs/alerting.md)
