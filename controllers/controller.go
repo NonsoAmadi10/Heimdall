@@ -1,12 +1,14 @@
 package controllers
 
 import (
+	"errors"
 	"log"
 	"strconv"
 	"time"
 
 	"github.com/NonsoAmadi10/p2p-analysis/services"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
 type Response struct {

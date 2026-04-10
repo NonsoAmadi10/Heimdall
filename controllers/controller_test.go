@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/NonsoAmadi10/p2p-analysis/services"
 	"github.com/NonsoAmadi10/p2p-analysis/utils"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
 func TestGetMetricsSuccess(t *testing.T) {

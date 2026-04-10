@@ -14,7 +14,7 @@ func DB() (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	if err := db.AutoMigrate(&utils.ConnectionMetrics{}); err != nil {
+	if err := db.AutoMigrate(&utils.ConnectionMetrics{}, &utils.Alert{}); err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
 
